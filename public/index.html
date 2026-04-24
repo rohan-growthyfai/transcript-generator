@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Transcript Generator — Paste any social URL</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9D%3C/text%3E%3C/svg%3E" />
+<style>
+  :root {
+    --bg: #0b1020;
+    --bg-2: #0f1530;
+    --card: #141b3a;
+    --text: #e7ecff;
+    --muted: #8892b0;
+    --accent: #7c8cff;
+    --accent-2: #5ce1e6;
+    --danger: #ff6b81;
+    --ok: #34d399;
+    --border: #23305e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: radial-gradient(1200px 600px at 10% -10%, #1a2558 0%, transparent 60%),
+                radial-gradient(900px 600px at 110% 10%, #0f2e3a 0%, transparent 55%),
+                linear-gradient(180deg, var(--bg), var(--bg-2));
+    min-height: 100vh;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 48px 20px 80px; }
+  header h1 { font-size: 34px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  header p { color: var(--muted); margin: 0 0 28px; }
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  .row { display: flex; gap: 10px; }
+  input[type="url"] {
+    flex: 1;
+    background: #0c1230;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 14px 16px;
+    border-radius: 12px;
+    font-size: 16px;
+    outline: none;
+  }
+  input[type="url"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,140,255,.18); }
+  button {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #0b1020;
+    font-weight: 700;
+    border: 0;
+    border-radius: 12px;
+    padding: 0 18px;
+    cursor: pointer;
+    font-size: 15px;
+    min-width: 130px;
+  }
+  button:disabled { opacity: .6; cursor: not-allowed; }
+  .meta { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center; margin-top: 18px; }
+  .meta img { width: 96px; height: 96px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border); }
+  .meta .t { font-weight: 600; }
+  .meta .s { color: var(--muted); font-size: 13px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; color: #0b1020; background: var(--accent-2); margin-right: 6px; }
+  .pill.muted { background: #2c3774; color: var(--text); }
+  .tabs { display: flex; gap: 6px; margin: 18px 0 10px; }
+  .tab {
+    padding: 8px 14px; border-radius: 10px; cursor: pointer; user-select: none;
+    background: #121a3c; border: 1px solid var(--border); color: var(--muted); font-size: 14px;
+  }
+  .tab.active { color: var(--text); border-color: var(--accent); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  pre.plain {
+    white-space: pre-wrap; word-wrap: break-word;
+    background: #0c1230; border: 1px solid var(--border); padding: 14px; border-radius: 12px;
+    max-height: 55vh; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13.5px;
+  }
+  .seg { display: grid; grid-template-columns: 90px 1fr; gap: 12px; padding: 10px 12px; border-bottom: 1px solid #1d2652; }
+  .seg:last-child { border-bottom: 0; }
+  .seg .ts { color: var(--accent-2); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; padding-top: 2px; }
+  .seg .tx { color: var(--text); }
+  .list {
+    background: #0c1230; border: 1px solid var(--border); border-radius: 12px; max-height: 55vh; overflow: auto;
+  }
+  .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .btn-ghost {
+    background: transparent; color: var(--text); border: 1px solid var(--border); padding: 8px 12px;
+    min-width: auto; border-radius: 10px; font-size: 13px; font-weight: 500;
+  }
+  .err {
+    margin-top: 16px; padding: 12px 14px; border-radius: 12px;
+    background: rgba(255,107,129,.08); color: var(--danger); border: 1px solid rgba(255,107,129,.3);
+  }
+  .ok {
+    margin-top: 16px; padding: 12px 14px; border-radius: 12px;
+    background: rgba(52,211,153,.08); color: var(--ok); border: 1px solid rgba(52,211,153,.3);
+  }
+  .loader {
+    display: inline-block; width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.25); border-top-color: #0b1020; animation: sp .8s linear infinite; vertical-align: -3px;
+  }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  footer { color: var(--muted); text-align: center; margin-top: 28px; font-size: 13px; }
+  footer code { background: #121a3c; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); }
+  @media (max-width: 560px) {
+    .row { flex-direction: column; }
+    button { padding: 14px; }
+    .seg { grid-template-columns: 72px 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Transcript Generator</h1>
+    <p>Paste any YouTube, Instagram, TikTok, Twitter/X, Facebook, or other social URL — get a timestamped transcript.</p>
+  </header>
+
+  <div class="card">
+    <form id="f" class="row" autocomplete="off">
+      <input id="u" type="url" required placeholder="https://www.youtube.com/watch?v=... or https://www.instagram.com/reel/... etc." />
+      <button id="go" type="submit">Get Transcript</button>
+    </form>
+
+    <div id="status"></div>
+    <div id="meta"></div>
+
+    <div id="out" style="display:none">
+      <div class="tabs">
+        <div class="tab active" data-t="timestamped">Timestamped</div>
+        <div class="tab" data-t="plain">Plain text</div>
+      </div>
+      <div id="p-timestamped" class="panel active"><div id="list" class="list"></div></div>
+      <div id="p-plain" class="panel"><pre id="raw" class="plain"></pre></div>
+      <div class="actions">
+        <button class="btn-ghost" id="copyTs">Copy timestamped</button>
+        <button class="btn-ghost" id="copyPlain">Copy plain</button>
+        <button class="btn-ghost" id="dlTxt">Download .txt</button>
+        <button class="btn-ghost" id="dlSrt">Download .srt</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Powered by <code>yt-dlp</code> + platform captions. Works best on videos that have subtitles or auto-captions.
+  </footer>
+</div>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const statusEl = $('#status');
+  const metaEl = $('#meta');
+  const outEl = $('#out');
+  const listEl = $('#list');
+  const rawEl = $('#raw');
+  const btn = $('#go');
+  let lastData = null;
+
+  function tsHMS(sec) {
+    const s = Math.max(0, Math.floor(sec));
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), x = s%60;
+    const p = (n) => String(n).padStart(2,'0');
+    return h > 0 ? `${p(h)}:${p(m)}:${p(x)}` : `${p(m)}:${p(x)}`;
+  }
+  function tsSRT(sec) {
+    const ms = Math.round((sec - Math.floor(sec)) * 1000);
+    const s = Math.floor(sec);
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), x = s%60;
+    const p = (n, w=2) => String(n).padStart(w,'0');
+    return `${p(h)}:${p(m)}:${p(x)},${p(ms,3)}`;
+  }
+  function esc(s){ return s.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c])); }
+  function download(name, text) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+    a.download = name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  async function copyText(t) {
+    try { await navigator.clipboard.writeText(t); flashOk('Copied to clipboard'); }
+    catch { flashErr('Copy failed'); }
+  }
+  function flashOk(msg) { statusEl.innerHTML = `<div class="ok">${esc(msg)}</div>`; setTimeout(() => statusEl.innerHTML = '', 1500); }
+  function flashErr(msg) { statusEl.innerHTML = `<div class="err">${esc(msg)}</div>`; }
+
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('p-' + t.dataset.t).classList.add('active');
+  }));
+
+  $('#copyTs').addEventListener('click', () => {
+    if (!lastData) return;
+    const txt = (lastData.segments || []).map(s => `[${s.timestamp}] ${s.text}`).join('\n');
+    copyText(txt || lastData.raw_text || '');
+  });
+  $('#copyPlain').addEventListener('click', () => {
+    if (!lastData) return;
+    copyText(lastData.raw_text || (lastData.segments || []).map(s => s.text).join(' '));
+  });
+  $('#dlTxt').addEventListener('click', () => {
+    if (!lastData) return;
+    const txt = (lastData.segments && lastData.segments.length)
+      ? lastData.segments.map(s => `[${s.timestamp}] ${s.text}`).join('\n')
+      : (lastData.raw_text || '');
+    download('transcript.txt', txt);
+  });
+  $('#dlSrt').addEventListener('click', () => {
+    if (!lastData || !lastData.segments || !lastData.segments.length) return flashErr('No timestamped segments to export.');
+    const srt = lastData.segments.map((s, i) =>
+      `${i+1}\n${tsSRT(s.start)} --> ${tsSRT(s.end || (s.start+2))}\n${s.text}\n`
+    ).join('\n');
+    download('transcript.srt', srt);
+  });
+
+  $('#f').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const url = $('#u').value.trim();
+    if (!url) return;
+    lastData = null;
+    outEl.style.display = 'none';
+    metaEl.innerHTML = '';
+    statusEl.innerHTML = `<div class="ok"><span class="loader"></span> Fetching transcript… this can take up to ~90s for platforms like Instagram/TikTok.</div>`;
+    btn.disabled = true;
+    try {
+      const r = await fetch('/api/transcript', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await r.json();
+      if (!r.ok) {
+        flashErr((data && (data.error + (data.details ? ' — ' + data.details : ''))) || 'Failed to fetch transcript');
+        return;
+      }
+      lastData = data;
+      statusEl.innerHTML = '';
+      // meta
+      const platformPill = `<span class="pill">${esc(data.platform || 'media')}</span>`;
+      const srcPill = data.source ? `<span class="pill muted">${esc(data.source)}</span>` : '';
+      metaEl.innerHTML = `
+        <div class="meta">
+          ${data.thumbnail ? `<img src="${esc(data.thumbnail)}" alt="" referrerpolicy="no-referrer"/>` : `<div></div>`}
+          <div>
+            <div class="t">${esc(data.title || 'Untitled')}</div>
+            <div class="s">${platformPill}${srcPill}${data.uploader ? ' · ' + esc(data.uploader) : ''}${data.duration ? ' · ' + tsHMS(data.duration) : ''}</div>
+          </div>
+        </div>`;
+      // timestamped
+      if (data.segments && data.segments.length) {
+        listEl.innerHTML = data.segments.map(s =>
+          `<div class="seg"><div class="ts">${esc(s.timestamp)}</div><div class="tx">${esc(s.text)}</div></div>`
+        ).join('');
+      } else {
+        listEl.innerHTML = `<div class="seg"><div class="ts">—</div><div class="tx">No per-segment timestamps available for this URL (platform did not expose captions). Plain text shown on the other tab.</div></div>`;
+      }
+      rawEl.textContent = data.raw_text || (data.segments || []).map(s => s.text).join(' ');
+      outEl.style.display = 'block';
+    } catch (err) {
+      flashErr('Network error: ' + (err && err.message || err));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
