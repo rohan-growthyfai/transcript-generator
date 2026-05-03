@@ -3,3 +3,4 @@ package-lock.json
 bin/cloudflared
 .DS_Store
 *.log
+current-url.txt
